@@ -1,8 +1,7 @@
 
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.SocialPlatforms;
-using UnityEngine.SocialPlatforms.Impl;
+using SQLite4Unity3d;
 
 public class Manager : MonoBehaviour
 {
