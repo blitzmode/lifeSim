@@ -12,9 +12,17 @@ public class Manager : MonoBehaviour
     int maxReasources = 1000;
     int startingMeeps = 1000;
     int startingReasources = 100000;
+
+    SQLiteConnection db;
+
+
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
+        string path = Application.persistentDataPath + "saves/save1.db";
+        db = new SQLiteConnection(path, SQLiteOpenFlags.Create | SQLiteOpenFlags.ReadWrite);
+        db.CreateTable<Meep>();
+
         for (int i = 0; i < startingMeeps; i++)
         {
             Gene_Meep dom = new Gene_Meep();
@@ -26,7 +34,7 @@ public class Manager : MonoBehaviour
                 newMeep
             );
         }
-        for (int i = 0; i < 1000; i++)
+        for (int i = 0; i < startingReasources; i++)
         {
             Gene_Resource gene = new Gene_Resource();
             resources.Add(
@@ -41,23 +49,23 @@ public class Manager : MonoBehaviour
         {
             Meep meep = meeps[i];
 
-            meep.water -= 0;
-            if (meep.water <= 0)
+            meep.Water -= 0;
+            if (meep.Water <= 0)
             {
                 Destroy(meep.ob);
                 meeps.Remove(meep);
                 continue;
             }
 
-            meep.food -= 1;
-            if (meep.food <= 0)
+            meep.Food -= 1;
+            if (meep.Food <= 0)
             {
                 Destroy(meep.ob);
                 meeps.Remove(meep);
                 continue;
             }
 
-            if (meep.food >= meep.dom.minNeededForChild)
+            if (meep.Food >= meep.dom.minNeededForChild)
             {
                 Meep bestM = null;
                 float scoreM = float.MaxValue;
@@ -65,7 +73,7 @@ public class Manager : MonoBehaviour
                 {
                     if (i == k) continue;
                     Meep OtherMeep = meeps[k];
-                    if (meep.food >= meep.dom.minNeededForChild && OtherMeep.food > OtherMeep.dom.minNeededForChild)
+                    if (meep.Food >= meep.dom.minNeededForChild && OtherMeep.Food > OtherMeep.dom.minNeededForChild)
                     {
                         float distance = (meep.ob.transform.position - OtherMeep.ob.transform.position).magnitude;
                         if (distance > meep.dom.sight) continue;
@@ -81,15 +89,15 @@ public class Manager : MonoBehaviour
                     Vector3 dir = bestM.ob.transform.position - meep.ob.transform.position;
                     if (dir.magnitude < meep.dom.speed)
                     {
-                        Meep parent = Random.Range(0, 2) == 0 ? meep : bestM;
-                        Meep newMeep = new Meep(parent.dom, parent.resitive, parent, MeepMesh);
+                        Meep Parent = Random.Range(0, 2) == 0 ? meep : bestM;
+                        Meep newMeep = new Meep(Parent.dom, Parent.res, Parent, MeepMesh);
                         newMeep.ob.transform.position = (bestM.ob.transform.position + meep.ob.transform.position) / 2; 
                         meeps.Add(
                             newMeep
                         );
 
-                        meep.food -= 50;
-                        bestM.food -= 50;
+                        meep.Food -= 50;
+                        bestM.Food -= 50;
                     }
                     else
                     {
@@ -111,7 +119,7 @@ public class Manager : MonoBehaviour
                 Resource resource = resources[j];
                 float distance = (meep.ob.transform.position - resource.ob.transform.position).magnitude;
                 if (distance > meep.dom.sight) continue;
-                if (meep.dom.maxFood < meep.food + resource.gene.points)
+                if (meep.dom.maxFood < meep.Food + resource.gene.points)
                 {
                     continue;
                 }
@@ -134,7 +142,7 @@ public class Manager : MonoBehaviour
                 if (dir.magnitude < meep.dom.speed)
                 {
                     meep.ob.transform.position = best.ob.transform.position;
-                    meep.food += best.gene.points;
+                    meep.Food += best.gene.points;
 
                     Destroy(best.ob);
                     resources.Remove(best);
@@ -175,24 +183,24 @@ public class Manager : MonoBehaviour
 
 public class Meep
 {
-    public Gene_Meep dom;
-    public Gene_Meep resitive;
+    [PrimaryKey, AutoIncrement]
+    public int Id { get; set; }
+    public int Food { get; set; }
+    public int Water { get; set; }
+    public Gene_Meep dom { get; set; } //FK
+    public Gene_Meep res { get; set; } //FK
+    public Meep Parent { get; set; } //FK
 
     public GameObject ob;
-
-    public int food;
-    public int water;
-
-    public Meep parent;
 
     public Meep(Gene_Meep dom_, Gene_Meep res_, Meep parent_, Mesh mesh)
     {
         this.dom = dom_;
-        this.resitive = res_;
-        this.food = 100;
-        this.water = 100;
+        this.res = res_;
+        this.Food = 100;
+        this.Water = 100;
 
-        this.parent = parent_;
+        this.Parent = parent_;
 
         this.ob = new GameObject();
         MeshFilter MF = this.ob.AddComponent<MeshFilter>();
@@ -226,10 +234,10 @@ public class Resource
 {
     public Gene_Resource gene;
     public GameObject ob;
-    public int parent;
+    public int Parent;
     public int life;
 
-    public Resource(Gene_Resource gene, Resource parent, Mesh mesh)
+    public Resource(Gene_Resource gene, Resource Parent, Mesh mesh)
     {
         this.gene = gene;
         this.life = gene.life + Random.Range(-5, 5);
@@ -240,7 +248,7 @@ public class Resource
         MeshRenderer MR = this.ob.AddComponent<MeshRenderer>();
         MR.material.color = Color.HSVToRGB(gene.hue, 1, 1);
 
-        if (parent == null)
+        if (Parent == null)
         {
             Vector2 ran = Random.insideUnitCircle * 30f;
             this.ob.transform.position = new Vector3(ran.x, 0, ran.y);
@@ -249,7 +257,7 @@ public class Resource
         {
             Vector2 dir2D = Random.insideUnitCircle.normalized;
             Vector3 dir = new Vector3(dir2D.x, 0, dir2D.y);
-            this.ob.transform.position = parent.ob.transform.position + dir;
+            this.ob.transform.position = Parent.ob.transform.position + dir;
             this.ob.transform.position = Vector3.ClampMagnitude(this.ob.transform.position, 30);
         }
 
