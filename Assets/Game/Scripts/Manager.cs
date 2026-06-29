@@ -7,14 +7,17 @@ public class Manager : MonoBehaviour
 {
     public Mesh MeepMesh;
     public Mesh ResourceMesh;
-    List<Meep> meeps = new List<Meep>();
-    List<Resource> resources = new List<Resource>();
+
+    public static List<Meep> meeps = new List<Meep>();
+    public static List<Gene_Meep> meepGenes = new List<Gene_Meep>();
+    public static List<Resource> resources = new List<Resource>();
+    public static List<Gene_Resource> resourceGene = new List<Gene_Resource>();
+
     int maxReasources = 1000;
     int startingMeeps = 1000;
     int startingReasources = 100000;
 
     SQLiteConnection db;
-
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
@@ -22,25 +25,28 @@ public class Manager : MonoBehaviour
         string path = Application.persistentDataPath + "saves/save1.db";
         db = new SQLiteConnection(path, SQLiteOpenFlags.Create | SQLiteOpenFlags.ReadWrite);
         db.CreateTable<Meep>();
+        db.CreateTable<Gene_Meep>();
+        db.CreateTable<Resource>();
+        db.CreateTable<Gene_Resource>();
 
         for (int i = 0; i < startingMeeps; i++)
         {
             Gene_Meep dom = new Gene_Meep();
             Gene_Meep res = new Gene_Meep();
-            Meep newMeep = new Meep(dom, res, null, MeepMesh);
+            Meep newMeep = new Meep(dom.Id, res.Id, 0, MeepMesh);
             Vector2 ran = Random.insideUnitCircle * 30f;
             newMeep.ob.transform.position = new Vector3(ran.x, 0, ran.y);
-            meeps.Add(
-                newMeep
-            );
         }
+        db.InsertAll(meeps);
+        db.InsertAll(meepGenes);
+
         for (int i = 0; i < startingReasources; i++)
         {
             Gene_Resource gene = new Gene_Resource();
-            resources.Add(
-                new Resource(gene, null, ResourceMesh)
-            );
+            new Resource(gene.Id, 0, ResourceMesh);
         }
+        db.InsertAll(resources);
+        db.InsertAll(resourceGene);
     }
     // Update is called once per frame
     void Update()
@@ -183,20 +189,21 @@ public class Manager : MonoBehaviour
 
 public class Meep
 {
-    [PrimaryKey, AutoIncrement]
+    [PrimaryKey]
     public int Id { get; set; }
     public int Food { get; set; }
     public int Water { get; set; }
-    public Gene_Meep dom { get; set; } //FK
-    public Gene_Meep res { get; set; } //FK
-    public Meep Parent { get; set; } //FK
+    public int Dom { get; set; } //FK
+    public int Res { get; set; } //FK
+    public int Parent { get; set; } //FK
 
     public GameObject ob;
 
-    public Meep(Gene_Meep dom_, Gene_Meep res_, Meep parent_, Mesh mesh)
+    public Meep(int dom_, int res_, int parent_, Mesh mesh)
     {
-        this.dom = dom_;
-        this.res = res_;
+        this.Id = Manager.meeps.Count;
+        this.Dom = dom_;
+        this.Dom = res_;
         this.Food = 100;
         this.Water = 100;
 
@@ -206,49 +213,60 @@ public class Meep
         MeshFilter MF = this.ob.AddComponent<MeshFilter>();
         MF.mesh = mesh;
         MeshRenderer MR = this.ob.AddComponent<MeshRenderer>();
-        MR.material.color = Color.HSVToRGB(dom_.raceHue, 1, 1);
+        MR.material.color = Color.HSVToRGB(Manager.meepGenes[dom_].Hue, 1, 1);
+
+        Manager.meeps.Add(this);
     }
 }
 
 public class Gene_Meep
 {
-    public float speed;
-    public int sight;
-    public float raceHue;
-    public int maxFood;
-    public int maxWater;
-    public int minNeededForChild;
+    [PrimaryKey]
+    public int Id { get; set; }
+    public float Speed { get; set; }
+    public int Sight { get; set; }
+    public float Hue { get; set; }
+    public int MaxFood { get; set; }
+    public int MaxWater { get; set; }
+    public int MinNeededForChild { get; set; }
 
     public Gene_Meep()
     {
-        this.speed = Random.Range(.1f, 1f);
-        this.sight = Random.Range(5, 10);
-        this.raceHue = Random.Range(.5f, 1f);
-        this.maxFood = Random.Range(80, 120);
-        this.maxWater = Random.Range(80, 120);
-        this.minNeededForChild = Random.Range(50, Mathf.Min(this.maxFood, this.maxWater));
+        this.Id = Manager.meepGenes.Count;
+        this.Speed = Random.Range(.1f, 1f);
+        this.Sight = Random.Range(5, 10);
+        this.Hue = Random.Range(.5f, 1f);
+        this.MaxFood = Random.Range(80, 120);
+        this.MaxWater = Random.Range(80, 120);
+        this.MinNeededForChild = Random.Range(50, Mathf.Min(this.MaxFood, this.MaxWater));
+
+        Manager.meepGenes.Add(this);
     }
 }
 
 public class Resource
 {
-    public Gene_Resource gene;
+    [PrimaryKey]
+    public int Id { get; set; }
+    public int Gene { get; set; }
+    public int Parent { get; set; }
+    public int Life { get; set; }
+
     public GameObject ob;
-    public int Parent;
-    public int life;
 
-    public Resource(Gene_Resource gene, Resource Parent, Mesh mesh)
+    public Resource(int gene, int Parent, Mesh mesh)
     {
-        this.gene = gene;
-        this.life = gene.life + Random.Range(-5, 5);
-
+        this.Id = Manager.resources.Count;
+        this.Gene = gene;
+        this.Life = Manager.resourceGene[gene].Life + Random.Range(-5, 5);
         this.ob = new GameObject();
+
         MeshFilter MF = this.ob.AddComponent<MeshFilter>();
         MF.mesh = mesh;
         MeshRenderer MR = this.ob.AddComponent<MeshRenderer>();
-        MR.material.color = Color.HSVToRGB(gene.hue, 1, 1);
+        MR.material.color = Color.HSVToRGB(Manager.resourceGene[gene].Hue, 1, 1);
 
-        if (Parent == null)
+        if (Parent == 0)
         {
             Vector2 ran = Random.insideUnitCircle * 30f;
             this.ob.transform.position = new Vector3(ran.x, 0, ran.y);
@@ -257,24 +275,30 @@ public class Resource
         {
             Vector2 dir2D = Random.insideUnitCircle.normalized;
             Vector3 dir = new Vector3(dir2D.x, 0, dir2D.y);
-            this.ob.transform.position = Parent.ob.transform.position + dir;
+            this.ob.transform.position = Manager.resources[Parent].ob.transform.position + dir;
             this.ob.transform.position = Vector3.ClampMagnitude(this.ob.transform.position, 30);
         }
 
         this.ob.transform.localScale = Vector3.one * .5f;
+
+        Manager.resources.Add(this);
     }
 }
 
 public class Gene_Resource
 {
-    public int points;
-    public float hue;
-    public int life;
+    public int Id { get; set; }
+    public int Points { get; set; }
+    public float Hue { get; set; }
+    public int Life { get; set; }
 
     public Gene_Resource()
     {
-        this.points = Random.Range(10, 30);
-        this.hue = Random.Range(0f, .5f);
-        this.life = Random.Range(10, 30);
+        this.Id = Manager.resourceGene.Count;
+        this.Points = Random.Range(10, 30);
+        this.Hue = Random.Range(0f, .5f);
+        this.Life = Random.Range(10, 30);
+
+        Manager.resourceGene.Add(this);
     }
 }
