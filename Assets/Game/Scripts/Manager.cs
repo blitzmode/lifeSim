@@ -71,7 +71,7 @@ public class Manager : MonoBehaviour
                 continue;
             }
 
-            if (meep.Food >= meep.dom.minNeededForChild)
+            if (meep.Food >= Manager.meepGenes[meep.Dom].MinNeededForChild)
             {
                 Meep bestM = null;
                 float scoreM = float.MaxValue;
@@ -79,10 +79,10 @@ public class Manager : MonoBehaviour
                 {
                     if (i == k) continue;
                     Meep OtherMeep = meeps[k];
-                    if (meep.Food >= meep.dom.minNeededForChild && OtherMeep.Food > OtherMeep.dom.minNeededForChild)
+                    if (meep.Food >= Manager.meepGenes[meep.Dom].MinNeededForChild && OtherMeep.Food > Manager.meepGenes[OtherMeep.Dom].MinNeededForChild)
                     {
                         float distance = (meep.ob.transform.position - OtherMeep.ob.transform.position).magnitude;
-                        if (distance > meep.dom.sight) continue;
+                        if (distance > Manager.meepGenes[meep.Dom].Sight) continue;
                         if (distance < scoreM)
                         {
                             bestM = OtherMeep;
@@ -93,14 +93,11 @@ public class Manager : MonoBehaviour
                 if (bestM != null)
                 {
                     Vector3 dir = bestM.ob.transform.position - meep.ob.transform.position;
-                    if (dir.magnitude < meep.dom.speed)
+                    if (dir.magnitude < Manager.meepGenes[meep.Dom].Speed)
                     {
                         Meep Parent = Random.Range(0, 2) == 0 ? meep : bestM;
-                        Meep newMeep = new Meep(Parent.dom, Parent.res, Parent, MeepMesh);
+                        Meep newMeep = new Meep(Parent.Dom, Parent.Res, Parent.Id, MeepMesh);
                         newMeep.ob.transform.position = (bestM.ob.transform.position + meep.ob.transform.position) / 2; 
-                        meeps.Add(
-                            newMeep
-                        );
 
                         meep.Food -= 50;
                         bestM.Food -= 50;
@@ -108,9 +105,8 @@ public class Manager : MonoBehaviour
                     else
                     {
                         dir /= dir.magnitude;
-                        meep.ob.transform.position += dir * meep.dom.speed;
+                        meep.ob.transform.position += dir * Manager.meepGenes[meep.Dom].Speed;
                     }
-
 
                     i++;
                     continue;
@@ -124,8 +120,8 @@ public class Manager : MonoBehaviour
             {
                 Resource resource = resources[j];
                 float distance = (meep.ob.transform.position - resource.ob.transform.position).magnitude;
-                if (distance > meep.dom.sight) continue;
-                if (meep.dom.maxFood < meep.Food + resource.gene.points)
+                if (distance > Manager.meepGenes[meep.Dom].Sight) continue;
+                if (Manager.meepGenes[meep.Dom].MaxFood < meep.Food + Manager.resourceGene[resource.Gene].Points)
                 {
                     continue;
                 }
@@ -139,16 +135,16 @@ public class Manager : MonoBehaviour
             if (best == null)
             {
                 Vector2 dir2D = Random.insideUnitCircle.normalized;
-                Vector3 dir = new Vector3(dir2D.x, 0, dir2D.y) * meep.dom.speed;
+                Vector3 dir = new Vector3(dir2D.x, 0, dir2D.y) * Manager.meepGenes[meep.Dom].Speed;
                 meep.ob.transform.position += dir;
             }
             else
             {
                 Vector3 dir = best.ob.transform.position - meep.ob.transform.position;
-                if (dir.magnitude < meep.dom.speed)
+                if (dir.magnitude < Manager.meepGenes[meep.Dom].Speed)
                 {
                     meep.ob.transform.position = best.ob.transform.position;
-                    meep.Food += best.gene.points;
+                    meep.Food += Manager.resourceGene[best.Gene].Points;
 
                     Destroy(best.ob);
                     resources.Remove(best);
@@ -156,7 +152,7 @@ public class Manager : MonoBehaviour
                 else
                 {
                     dir /= dir.magnitude;
-                    meep.ob.transform.position += dir * meep.dom.speed;
+                    meep.ob.transform.position += dir * Manager.meepGenes[meep.Dom].Speed;
                 }
             }
 
@@ -168,14 +164,14 @@ public class Manager : MonoBehaviour
         for (int i = 0; i < resources.Count;)
         {
             Resource resource = resources[i];
-            resource.life -= 1;
-            if (resource.life <= 0)
+            resource.Life -= 1;
+            if (resource.Life <= 0)
             {
                 for (int j = 0; j < 2; j++)
                 {
                     if (resources.Count >= maxReasources) continue;
                     resources.Add(
-                        new Resource(resource.gene, resource, ResourceMesh)
+                        new Resource(resource.Gene, resource.Id, ResourceMesh)
                     );
                 }
                 Destroy(resource.ob);
