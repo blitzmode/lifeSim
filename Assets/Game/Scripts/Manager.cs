@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using SQLite4Unity3d;
+using System.IO;
 
 public class Manager : MonoBehaviour
 {
@@ -22,31 +23,37 @@ public class Manager : MonoBehaviour
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
-        string path = Application.persistentDataPath + "saves/save1.db";
-        db = new SQLiteConnection(path, SQLiteOpenFlags.Create | SQLiteOpenFlags.ReadWrite);
-        db.CreateTable<Meep>();
-        db.CreateTable<Gene_Meep>();
-        db.CreateTable<Resource>();
-        db.CreateTable<Gene_Resource>();
-
-        for (int i = 0; i < startingMeeps; i++)
+        if (Directory.Exists(Menu.SaveFilePath))
         {
-            Gene_Meep dom = new Gene_Meep();
-            Gene_Meep res = new Gene_Meep();
-            Meep newMeep = new Meep(dom.Id, res.Id, 0, MeepMesh);
-            Vector2 ran = Random.insideUnitCircle * 30f;
-            newMeep.ob.transform.position = new Vector3(ran.x, 0, ran.y);
+            
         }
-        db.InsertAll(meeps);
-        db.InsertAll(meepGenes);
-
-        for (int i = 0; i < startingReasources; i++)
+        else
         {
-            Gene_Resource gene = new Gene_Resource();
-            new Resource(gene.Id, 0, ResourceMesh);
+            db = new SQLiteConnection(Menu.SaveFilePath, SQLiteOpenFlags.Create | SQLiteOpenFlags.ReadWrite);
+            db.CreateTable<Meep>();
+            db.CreateTable<Gene_Meep>();
+            db.CreateTable<Resource>();
+            db.CreateTable<Gene_Resource>();
+
+            for (int i = 0; i < startingMeeps; i++)
+            {
+                Gene_Meep dom = new Gene_Meep();
+                Gene_Meep res = new Gene_Meep();
+                Meep newMeep = new Meep(dom.Id, res.Id, 0, MeepMesh);
+                Vector2 ran = Random.insideUnitCircle * 30f;
+                newMeep.ob.transform.position = new Vector3(ran.x, 0, ran.y);
+            }
+            db.InsertAll(meeps);
+            db.InsertAll(meepGenes);
+
+            for (int i = 0; i < startingReasources; i++)
+            {
+                Gene_Resource gene = new Gene_Resource();
+                new Resource(gene.Id, 0, ResourceMesh);
+            }
+            db.InsertAll(resources);
+            db.InsertAll(resourceGene);
         }
-        db.InsertAll(resources);
-        db.InsertAll(resourceGene);
     }
     // Update is called once per frame
     void Update()
