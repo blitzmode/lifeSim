@@ -173,7 +173,7 @@ public class Manager : MonoBehaviour
                 MR.material.color = Color.HSVToRGB(Manager.meepGenes[meeps[i].Gene].Hue, 1, 1);
             }
             meepCount = db.Table<Meep>().Count();
-            resources = db.Table<Resource>().Where(m => m.Born + ResourcesLifeSpan > dataBaceInfo.Tick && m.EantenBy == -1).ToList<Resource>();
+            resources = db.Query<Resource>("SELECT * FROM Resource WHERE Born + ? >= ? AND EantenBy = -1", ResourcesLifeSpan, dataBaceInfo.Tick);
             for (int i = 0; i < resources.Count; i++)
             {
                 resources[i].ob = new GameObject("Resource");
@@ -232,20 +232,21 @@ public class Manager : MonoBehaviour
         {
             return db.Query<Meep>(
                 @"SELECT *
-                    FROM (
-                        SELECT 
-                            m.*,
-                            m.Born + ?1 + COALESCE(SUM(CASE WHEN r.EantenTick <= ?2 THEN g.Points ELSE 0 END), 0) - ?2 -
-                            (SELECT COUNT(*) FROM Meep child 
+                FROM (
+                    SELECT 
+                        m.Id, m.Born, m.Gene, m.Parent1, m.Parent2,
+                        m.PosX, m.PosY, m.Hungery,
+                        m.Born + ?1 + COALESCE(SUM(CASE WHEN r.EantenTick <= ?2 THEN g.Points ELSE 0 END), 0) - ?2 -
+                        (SELECT COUNT(*) FROM Meep child 
                             WHERE (child.Parent1 = m.Id OR child.Parent2 = m.Id) AND child.Born <= ?2) * ?3
-                            AS Food
-                        FROM Meep m
-                        LEFT JOIN Resource r ON r.EantenBy = m.Id
-                        LEFT JOIN Gene_Resource g ON g.Id = r.Gene
-                        WHERE m.Born <= ?2
-                        GROUP BY m.Id
-                    )
-                    WHERE Food > 0",
+                        AS Food
+                    FROM Meep m
+                    LEFT JOIN Resource r ON r.EantenBy = m.Id
+                    LEFT JOIN Gene_Resource g ON g.Id = r.Gene
+                    WHERE m.Born <= ?2
+                    GROUP BY m.Id
+                )
+                WHERE Food > 0",
                 FoodNeddedForChild * 2,
                 queryTick,
                 FoodNeddedForChild
@@ -461,8 +462,8 @@ public class Meep
     public float PosX { get; set; }
     public float PosY { get; set; }
     public bool Hungery { get; set; }
+    public int Food { get; set; }
 
-    public int Food;
     public GameObject ob;
     public Vector2 target;
 
