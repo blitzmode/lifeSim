@@ -14,7 +14,6 @@ public class Manager : MonoBehaviour
     public GameObject Prefab;
 
     public GameObject closeButton;
-    public GameObject killAllButton;
 
     // in game
     public Mesh MeepMesh;
@@ -56,6 +55,7 @@ public class Manager : MonoBehaviour
     {
         SMeepMesh = MeepMesh;
         SResourceMesh = ResourceMesh;
+        closeButton.GetComponent<Button>().onClick.AddListener(() => { MenuStart(); });
         MenuStart();
     }
 
@@ -63,10 +63,12 @@ public class Manager : MonoBehaviour
     void MenuStart()
     {
         // clear
-        grapth.SetActive(false);
+        grapth.transform.parent.gameObject.SetActive(false);
+        closeButton.SetActive(false);
 
         // start menu
         inMenu = true;
+        content.transform.parent.parent.gameObject.SetActive(true);
         List<GameObject> buttons = new List<GameObject>();
 
         GameObject addButton(string name)
@@ -117,27 +119,47 @@ public class Manager : MonoBehaviour
         RectTransform rect = content.GetComponent<RectTransform>();
         rect.anchorMax = new Vector2(1, 1);
         rect.anchorMin = new Vector2(0, 1f - .07f * buttons.Count);
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
 
         for (int i = 0; i < buttons.Count; i++)
         {
             RectTransform buttonRect = buttons[i].GetComponent<RectTransform>();
             buttonRect.anchorMax = new Vector2(1, (float)(i + 1) / (float)buttons.Count);
             buttonRect.anchorMin = new Vector2(0, (float)i / (float)buttons.Count);
+            buttonRect.offsetMax = Vector2.zero;
+            buttonRect.offsetMin = Vector2.zero;
         }
     }
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void GameStart()
     {
-        //clear
         for (int i = content.transform.childCount - 1; i >= 0; i--)
         {
             Destroy(content.transform.GetChild(i).gameObject);
         }
-        content.transform.parent.parent.gameObject.SetActive(false);
-        grapth.SetActive(false);
+        content.transform.parent.gameObject.SetActive(false);
+        grapth.transform.parent.gameObject.SetActive(false);
 
-        // start game
+        foreach (var m in meeps) if (m.ob != null) Destroy(m.ob);
+        foreach (var r in resources) if (r.ob != null) Destroy(r.ob);
+
+        meeps.Clear();
+        meepGenes.Clear();
+        resources.Clear();
+        resourceGene.Clear();
+        meepCount = 0;
+        resourceCount = 0;
+        dataBaceInfo = null;
+
+        if (db != null)
+        {
+            db.Close();
+            db = null;
+        }
+
+        closeButton.SetActive(true);
         inMenu = false;
         if (File.Exists(SaveFilePath))
         {
@@ -224,10 +246,8 @@ public class Manager : MonoBehaviour
 
     void StatsStart()
     {
-        // clear
-
         // start grapth
-        grapth.SetActive(true);
+        grapth.transform.parent.gameObject.SetActive(true);
         List<Meep> GetMeepsAtTick(int queryTick)
         {
             return db.Query<Meep>(
@@ -265,7 +285,7 @@ public class Manager : MonoBehaviour
                 {
                     series[j] = new LineGraph.LineSeries();
                     series[j].values = new List<float>();
-                    series[j].color = Color.HSVToRGB(Manager.resourceGene[j].Hue, 1, 1);
+                    series[j].color = Color.HSVToRGB(Manager.meepGenes[j].Hue, 1, 1);
                 }
 
                 for (int i = 0; i < xSize; i++)
